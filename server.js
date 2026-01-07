@@ -93,6 +93,11 @@ app.use(express.json()); // Middleware to parse JSON bodies
 
 // --- Summarization Helper Function ---
 async function performSummarization(pdfContent, userPrompt, res, llm) {
+    // Add error listener to prevent crash on response stream error
+    res.on('error', (err) => {
+        console.error('Response stream error:', err);
+    });
+
     try {
         const pdfDocument = new PDFParse(pdfContent);
         const pdfData = await pdfDocument.getText();
@@ -111,17 +116,20 @@ async function performSummarization(pdfContent, userPrompt, res, llm) {
         const result = await llm.generateContentStream(prompt);
 
         for await (const chunk of result.stream) {
+            if (!res.writable) break;
             const chunkText = chunk.text();
             res.write(chunkText);
         }
 
-        res.end();
+        if (res.writable) {
+            res.end();
+        }
 
     } catch (error) {
         console.error('Error:', error);
-        if (!res.headersSent) {
+        if (!res.headersSent && res.writable) {
             res.status(500).json({ error: 'An error occurred during summarization.' });
-        } else {
+        } else if (res.writable) {
             res.end();
         }
     }
