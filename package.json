@@ -1,7 +1,7 @@
 {
-  "name": "paper-summary-table",
+  "name": "pdf-summary-table",
   "version": "1.0.0",
-  "description": "논문 pdf를 업로드하면 내용을 요약하는 html을 작성하라. 내용 요약은 gemini를 사용한다. javascript 코드는 js 파일로 분리한다. ui 스타일은 css 파일로 분리한다.",
+  "description": "PDF 문서의 요약표를 작성한다. 내용 요약은 Gemini를 사용한다.",
   "main": "script.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -14,7 +14,6 @@
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "multer": "^2.0.2",
-    "node-fetch": "^3.3.2",
     "pdf-parse": "^2.4.5"
   }
 }
