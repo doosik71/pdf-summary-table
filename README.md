@@ -1,6 +1,6 @@
-# Paper Summary Web App
+# PDF Summary Web App
 
-This is a simple web application that allows you to upload a research paper in PDF format and get a summary of its content using Google's Gemini Pro API.
+This is a simple web application that allows you to upload a research paper in PDF format and get a summary of its content using Google's Gemini API.
 
 ## Features
 
@@ -18,6 +18,7 @@ This is a simple web application that allows you to upload a research paper in P
 1. **Clone the repository or download the files.**
 
 2. **Install dependencies:**
+
    Open your terminal in the project directory and run:
 
    ```bash
@@ -48,11 +49,11 @@ This is a simple web application that allows you to upload a research paper in P
 
    ```bash
    npm install
-   node server.js 9000
+   node server.js 8988
    ```
 
 2. **Open the application in your browser:**
 
-   Navigate to [http://localhost:3000](http://localhost:3000).
+   Navigate to [http://localhost:8988](http://localhost:8988).
 
 Now you can upload a PDF file and get its summary.
