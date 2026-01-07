@@ -16,8 +16,7 @@ body {
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-h1,
-h2 {
+h1 {
     text-align: center;
 }
 
@@ -27,17 +26,21 @@ h2 {
 
 .input-controls-wrapper {
     display: flex;
-    flex-wrap: wrap; /* Allows items to wrap to the next line on smaller screens */
-    gap: 15px; /* Space between input sections */
+    flex-wrap: wrap;
+    /* Allows items to wrap to the next line on smaller screens */
+    gap: 15px;
+    /* Space between input sections */
     margin-bottom: 15px;
-    align-items: flex-end; /* Align items to the bottom */
+    align-items: flex-end;
+    /* Align items to the bottom */
 }
 
 .file-input-wrapper,
 .url-input-wrapper {
     display: flex;
     flex-direction: column;
-    flex-grow: 1; /* Allows items to take up available space */
+    flex-grow: 1;
+    /* Allows items to take up available space */
 }
 
 .file-input-wrapper label,
@@ -51,13 +54,15 @@ h2 {
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    width: 100%; /* Ensure inputs take full width of their wrapper */
-    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    width: 100%;
+    /* Ensure inputs take full width of their wrapper */
+    box-sizing: border-box;
+    /* Include padding and border in the element's total width and height */
 }
 
 #pdf-upload {
     /* Remove previous margin to avoid conflicts with flex layout */
-    margin-bottom: 0; 
+    margin-bottom: 0;
 }
 
 /* Style for drag-over effect on file input */
@@ -74,9 +79,12 @@ h2 {
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    width: 100%; /* Ensure it takes full width of its container */
-    box-sizing: border-box; /* Include padding and border in the element's total width and height */
-    margin-bottom: 10px; /* Add margin-bottom for spacing */
+    width: 100%;
+    /* Ensure it takes full width of its container */
+    box-sizing: border-box;
+    /* Include padding and border in the element's total width and height */
+    margin-bottom: 10px;
+    /* Add margin-bottom for spacing */
 }
 
 #custom-prompt {
@@ -85,16 +93,22 @@ h2 {
     margin-top: 10px;
     padding: 8px;
     box-sizing: border-box;
-    border: 1px solid #ccc; /* Consistent border */
-    border-radius: 4px; /* Consistent border-radius */
-    min-height: 80px; /* Give it some initial height */
-    resize: vertical; /* Allow vertical resizing */
+    border: 1px solid #ccc;
+    /* Consistent border */
+    border-radius: 4px;
+    /* Consistent border-radius */
+    min-height: 80px;
+    /* Give it some initial height */
+    resize: vertical;
+    /* Allow vertical resizing */
 }
 
 .button-container {
     text-align: center;
-    margin-top: 20px; /* Add some space above the button */
-    margin-bottom: 20px; /* Space below the button */
+    margin-top: 20px;
+    /* Add some space above the button */
+    margin-bottom: 20px;
+    /* Space below the button */
 }
 
 
@@ -127,11 +141,13 @@ h2 {
 /* Styling for code elements within summary output */
 #summary-output code {
     font-family: 'Courier New', Courier, monospace;
-    font-size: 0.9em; /* Slightly smaller than body text for distinction */
+    font-size: 0.9em;
+    /* Slightly smaller than body text for distinction */
     background-color: #e9e9e9;
     padding: 2px 4px;
     border-radius: 3px;
-    white-space: pre-wrap; /* Ensure code wraps */
+    white-space: pre-wrap;
+    /* Ensure code wraps */
 }
 
 #summary-output table {
@@ -154,10 +170,14 @@ h2 {
 
 .copy-buttons-container {
     display: flex;
-    justify-content: flex-end; /* Align buttons to the right */
-    gap: 10px; /* Space between buttons */
-    margin-top: 15px; /* Space above the buttons */
-    margin-bottom: 10px; /* Space below the buttons */
+    justify-content: flex-end;
+    /* Align buttons to the right */
+    gap: 10px;
+    /* Space between buttons */
+    margin-top: 15px;
+    /* Space above the buttons */
+    margin-bottom: 10px;
+    /* Space below the buttons */
     /* Initially hide the buttons until summary is available */
     visibility: hidden;
     opacity: 0;
@@ -171,7 +191,8 @@ h2 {
 
 #copy-html-btn,
 #copy-markdown-btn {
-    background: #007bff; /* A nice blue color */
+    background: #007bff;
+    /* A nice blue color */
     color: #fff;
     padding: 8px 15px;
     border: none;

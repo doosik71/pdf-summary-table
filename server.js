@@ -46,17 +46,22 @@ async function performSummarization(pdfContent, userPrompt, res) {
         const prompt = userPrompt ? `${userPrompt}:\n\n${text}` : defaultPrompt;
 
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.flushHeaders();
 
-        const result = await llm.generateContent(prompt);
-        const responseText = result.response.text();
+        const result = await llm.generateContentStream(prompt);
 
-        process.stdout.write(responseText);
-
-        if (res.writable) {
-            res.write(responseText);
-            res.end();
+        for await (const chunk of result.stream) {
+            const chunkText = chunk.text?.();
+            if (res.writable && chunkText) {
+                res.write(chunkText);
+            }
         }
 
+        if (res.writable) {
+            res.end();
+        }
     } catch (error) {
         console.error('Error:', error);
         if (!res.headersSent && res.writable) {

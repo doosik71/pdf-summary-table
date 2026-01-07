@@ -12,6 +12,19 @@ const copyMarkdownBtn = document.getElementById('copy-markdown-btn');
 let rawMarkdownOutput = ''; // To store the raw Markdown for copying
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Configure marked to treat underscores as literal text
+    if (typeof marked !== 'undefined') {
+        marked.use({
+            walkTokens(token) {
+                if ((token.type === 'em' || token.type === 'strong') && token.raw.startsWith('_')) {
+                    token.type = 'text';
+                    token.text = token.raw;
+                    delete token.tokens;
+                }
+            }
+        });
+    }
+
     try {
         const response = await fetch('/prompts');
         if (!response.ok) {
@@ -184,7 +197,8 @@ summarizeBtn.addEventListener('click', async () => {
             }
             const chunkText = decoder.decode(value, { stream: true });
             rawMarkdownOutput += chunkText; // Accumulate raw markdown
-            summaryOutput.innerHTML = marked.parse(rawMarkdownOutput); // Parse accumulated markdown
+            const htmlOutput = marked.parse(rawMarkdownOutput); // Parse accumulated markdown
+            summaryOutput.innerHTML = htmlOutput.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
             // Trigger MathJax rendering after content update
             if (window.MathJax) {
