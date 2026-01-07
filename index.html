@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Summary</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1>PDF Summary</h1>
+        <p>Upload a PDF to get a summary.</p>
+        <div class="upload-section">
+            <div class="input-controls-wrapper">
+                <div class="file-input-wrapper">
+                    <label for="pdf-upload">PDF:</label>
+                    <input type="file" id="pdf-upload" accept=".pdf">
+                </div>
+                <div class="url-input-wrapper">
+                    <label for="pdf-url-input">PDF URL:</label>
+                    <input type="text" id="pdf-url-input" placeholder="Enter PDF URL (e.g., https://example.com/document.pdf)">
+                </div>
+            </div>
+            <div class="prompt-section">
+                <label for="prompt-select">Prompt:</label>
+                <select id="prompt-select">
+                    <option value="custom">Enter custom prompt</option>
+                </select>
+                <textarea id="custom-prompt" placeholder="Enter your custom prompt here..."></textarea>
+            </div>
+            <div class="button-container">
+                <button id="summarize-btn">Summarize</button>
+            </div>
+        </div>
+        <div class="summary-section">
+            <div id="summary-output">
+                <p>The summary will appear here.</p>
+            </div>
+            <div class="copy-buttons-container">
+                <button id="copy-html-btn">Copy HTML</button>
+                <button id="copy-markdown-btn">Copy Markdown</button>
+            </div>
+            <div id="loading-animation">
+                <div class="spinner"></div>
+                <p>Waiting for Gemini response...</p>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- MathJax Configuration -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            svg: {
+                fontCache: 'global'
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</body>
+
+</html>
