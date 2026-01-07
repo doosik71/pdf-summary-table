@@ -1,4 +1,5 @@
 require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const multer = require('multer');
@@ -15,8 +16,72 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 if (!GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY is not defined in the .env file");
 }
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+
+// Simple wrapper for OpenRouter to match Gemini's interface
+class OpenRouterWrapper {
+    constructor(options) {
+        this.apiKey = options.apiKey;
+        this.modelName = options.modelName;
+    }
+
+    async generateContentStream(prompt) {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${this.apiKey}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                model: this.modelName,
+                messages: [{ role: "user", content: prompt }],
+                stream: true
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`OpenRouter API Error: ${response.status} - ${errorText}`);
+        }
+
+        const stream = (async function* () {
+            const decoder = new TextDecoder();
+            let buffer = '';
+            for await (const chunk of response.body) {
+                buffer += decoder.decode(chunk, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (trimmed.startsWith('data: ')) {
+                        const data = trimmed.slice(6);
+                        if (data === '[DONE]') return;
+                        try {
+                            const json = JSON.parse(data);
+                            const content = json.choices[0]?.delta?.content;
+                            if (content) yield { text: () => content };
+                        } catch (e) { }
+                    }
+                }
+            }
+        })();
+
+        return { stream };
+    }
+}
+
+let llm; // This will hold our selected LLM
+
+// Determine which model to use based on environment variable or default
+const SELECTED_MODEL = process.env.LLM_MODEL || 'gemini-2.5-flash'; // Default to Gemini
+
+if (SELECTED_MODEL.startsWith('openrouter-')) {
+    llm = new OpenRouterWrapper({ apiKey: OPENROUTER_API_KEY, modelName: SELECTED_MODEL.replace('openrouter-', '') });
+} else {
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    llm = genAI.getGenerativeModel({ model: SELECTED_MODEL });
+}
 
 let predefinedPrompts = []; // Array to store prompts from prompt.json
 
@@ -26,9 +91,8 @@ app.use(express.static(__dirname)); // Serve static files from the current direc
 app.use(express.json()); // Middleware to parse JSON bodies
 
 
-
 // --- Summarization Helper Function ---
-async function performSummarization(pdfContent, userPrompt, res, model) {
+async function performSummarization(pdfContent, userPrompt, res, llm) {
     try {
         const pdfDocument = new PDFParse(pdfContent);
         const pdfData = await pdfDocument.getText();
@@ -44,7 +108,7 @@ async function performSummarization(pdfContent, userPrompt, res, model) {
 
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
 
-        const result = await model.generateContentStream(prompt);
+        const result = await llm.generateContentStream(prompt);
 
         for await (const chunk of result.stream) {
             const chunkText = chunk.text();
@@ -79,7 +143,7 @@ app.post('/summarize-file', upload.single('pdfFile'), async (req, res) => {
     }
     const pdfContent = { data: req.file.buffer };
     const userPrompt = req.body.prompt;
-    await performSummarization(pdfContent, userPrompt, res, model);
+    await performSummarization(pdfContent, userPrompt, res, llm);
 });
 
 // Route for URL submissions
@@ -90,7 +154,7 @@ app.post('/summarize-url', async (req, res) => {
     }
     const pdfContent = { url: pdfUrl };
     const userPrompt = req.body.prompt;
-    await performSummarization(pdfContent, userPrompt, res, model);
+    await performSummarization(pdfContent, userPrompt, res, llm);
 });
 
 const net = require('net');
