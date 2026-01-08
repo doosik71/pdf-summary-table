@@ -55,6 +55,13 @@
     <!-- MathJax Configuration -->
     <script>
         MathJax = {
+            options: {
+                menuOptions: {
+                    settings: {
+                        renderer: 'CHTML'
+                    }
+                }
+            },
             tex: {
                 inlineMath: [['$', '$'], ['\\(', '\\)']],
                 displayMath: [['$$', '$$'], ['\\[', '\\]']]

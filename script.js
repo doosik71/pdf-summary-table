@@ -21,6 +21,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     token.text = token.raw;
                     delete token.tokens;
                 }
+                if (token.type === 'del') {
+                    token.type = 'text';
+                    token.text = token.raw;
+                    delete token.tokens;
+                }
             },
             extensions: [{
                 name: 'mathDelimiters',
