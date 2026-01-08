@@ -21,7 +21,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                     token.text = token.raw;
                     delete token.tokens;
                 }
-            }
+            },
+            extensions: [{
+                name: 'mathDelimiters',
+                level: 'inline',
+                start(src) { return src.match(/\\[\[\]()]/)?.index; },
+                tokenizer(src, tokens) {
+                    const match = /^(\\[\[\]()])/.exec(src);
+                    if (match) {
+                        return {
+                            type: 'text',
+                            raw: match[0],
+                            text: match[0]
+                        };
+                    }
+                }
+            }]
         });
     }
 
