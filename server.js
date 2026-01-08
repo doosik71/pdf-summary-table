@@ -24,10 +24,7 @@ async function performSummarization(pdfContent, userPrompt, res) {
         console.error('Response stream error:', err);
     });
 
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'No key available';
     const SELECTED_MODEL = process.env.LLM_MODEL || 'gemini-2.5-flash';
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const llm = genAI.getGenerativeModel({ model: SELECTED_MODEL });
 
     try {
         console.log("Extracting text from PDF document...")
@@ -40,7 +37,7 @@ async function performSummarization(pdfContent, userPrompt, res) {
             return res.status(400).json({ error: 'Could not extract text from the PDF.' });
         }
 
-        console.log("Requesting task to Gemini...")
+        console.log(`Requesting task to LLM (${SELECTED_MODEL})...`)
 
         const defaultPrompt = `Please summarize the following text in a table format, including the problem, contribution, proposed method, experimental results, and conclusion. If any of these sections are not present, please indicate 'N/A'. Please use a concise, outline format for the sentences.:\n\n${text}`;
         const prompt = userPrompt ? `${userPrompt}:\n\n${text}` : defaultPrompt;
@@ -50,12 +47,73 @@ async function performSummarization(pdfContent, userPrompt, res) {
         res.setHeader('Connection', 'keep-alive');
         res.flushHeaders();
 
-        const result = await llm.generateContentStream(prompt);
+        if (SELECTED_MODEL.toLowerCase() === 'openai') {
+            const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+            const OPENAI_URL = process.env.OPENAI_URL + "/v1/chat/completions";
 
-        for await (const chunk of result.stream) {
-            const chunkText = chunk.text?.();
-            if (res.writable && chunkText) {
-                res.write(chunkText);
+            if (!OPENAI_API_KEY || !OPENAI_URL) {
+                throw new Error('OpenAI credentials (OPENAI_API_KEY, OPENAI_URL) are missing.');
+            }
+
+            const response = await fetch(OPENAI_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: "gpt-4o",
+                    messages: [
+                        { role: "system", content: "You are a helpful assistant." },
+                        { role: "user", content: prompt }
+                    ],
+                    stream: true
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+            }
+
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            for await (const chunk of response.body) {
+                const chunkText = decoder.decode(chunk, { stream: true });
+                buffer += chunkText;
+                const lines = buffer.split('\n');
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (trimmed.startsWith('data: ')) {
+                        const data = trimmed.slice(6);
+                        if (data === '[DONE]') continue;
+                        try {
+                            const json = JSON.parse(data);
+                            const content = json.choices[0]?.delta?.content;
+                            if (content && res.writable) {
+                                res.write(content);
+                            }
+                        } catch (e) {
+                            console.error('Error parsing OpenAI JSON:', e);
+                        }
+                    }
+                }
+            }
+        } else {
+            const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'No key available';
+            const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+            const llm = genAI.getGenerativeModel({ model: SELECTED_MODEL });
+
+            const result = await llm.generateContentStream(prompt);
+
+            for await (const chunk of result.stream) {
+                const chunkText = chunk.text?.();
+                if (res.writable && chunkText) {
+                    res.write(chunkText);
+                }
             }
         }
 
