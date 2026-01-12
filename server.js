@@ -17,6 +17,153 @@ app.use(express.static(__dirname)); // Serve static files from the current direc
 app.use(express.json()); // Middleware to parse JSON bodies
 
 
+// --- LLM Classes ---
+
+class OpenAILLM {
+    constructor() {
+        this.baseUrl = process.env.OPENAI_URL || "http://127.0.0.1:1234";
+        this.modelName = process.env.OPENAI_MODEL || "gpt-4o";
+        this.apiKey = process.env.OPENAI_API_KEY || "lm-studio";
+
+        if (!this.apiKey || !this.baseUrl) {
+            throw new Error('OpenAI credentials (OPENAI_API_KEY, OPENAI_URL) are missing.');
+        }
+    }
+
+    async generateResponse(prompt, res) {
+        const url = this.baseUrl + "/v1/chat/completions";
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.apiKey}`
+            },
+            body: JSON.stringify({
+                model: this.modelName,
+                messages: [
+                    { role: "system", content: "You are a helpful assistant." },
+                    { role: "user", content: prompt }
+                ],
+                stream: true
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        for await (const chunk of response.body) {
+            const chunkText = decoder.decode(chunk, { stream: true });
+            buffer += chunkText;
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (trimmed.startsWith('data: ')) {
+                    const data = trimmed.slice(6);
+                    if (data === '[DONE]') continue;
+                    try {
+                        const json = JSON.parse(data);
+                        const content = json.choices[0]?.delta?.content;
+                        if (content && res.writable) {
+                            res.write(content);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing OpenAI JSON:', e);
+                    }
+                }
+            }
+        }
+    }
+}
+
+class OllamaLLM {
+    constructor() {
+        this.model = process.env.OLLAMA_MODEL || "gpt-oss";
+        this.baseUrl = process.env.OLLAMA_URL || "http://127.0.0.1:11434";
+        this.numCtx = parseInt(process.env.OLLAMA_CTX) || 32000;
+
+        if (!this.model || !this.baseUrl) {
+            throw new Error('Ollama credentials (OLLAMA_MODEL, OLLAMA_URL) are missing.');
+        }
+    }
+
+    async generateResponse(prompt, res) {
+        const baseUrl = this.baseUrl.replace(/\/$/, '');
+        const response = await fetch(`${baseUrl}/api/chat`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: this.model,
+                messages: [
+                    { role: "system", content: "You are a helpful assistant." },
+                    { role: "user", content: prompt }
+                ],
+                stream: true,
+                options: {
+                    num_ctx: this.numCtx
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Ollama API error: ${response.status} - ${errorText}`);
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        for await (const chunk of response.body) {
+            const chunkText = decoder.decode(chunk, { stream: true });
+            buffer += chunkText;
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed) continue;
+                try {
+                    const json = JSON.parse(trimmed);
+                    const content = json.message?.content;
+                    if (content && res.writable) {
+                        res.write(content);
+                    }
+                } catch (e) {
+                    console.error('Error parsing Ollama JSON:', e);
+                }
+            }
+        }
+    }
+}
+
+class GeminiLLM {
+    constructor() {
+        this.model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+        this.apiKey = process.env.GEMINI_API_KEY || 'No key!';
+    }
+
+    async generateResponse(prompt, res) {
+        const genAI = new GoogleGenerativeAI(this.apiKey);
+        const llm = genAI.getGenerativeModel({ model: this.model });
+        const result = await llm.generateContentStream(prompt);
+
+        for await (const chunk of result.stream) {
+            const chunkText = chunk.text?.();
+            if (res.writable && chunkText) {
+                res.write(chunkText);
+            }
+        }
+    }
+}
+
 // --- Summarization Helper Function ---
 async function performSummarization(pdfContent, userPrompt, res) {
     // Add error listener to prevent crash on response stream error
@@ -24,7 +171,7 @@ async function performSummarization(pdfContent, userPrompt, res) {
         console.error('Response stream error:', err);
     });
 
-    const SELECTED_MODEL = process.env.LLM_MODEL || 'gemini-2.5-flash';
+    const SELECTED_MODEL = process.env.LLM_MODEL || 'gemini';
 
     try {
         console.log("Extracting text from PDF document...")
@@ -37,85 +184,28 @@ async function performSummarization(pdfContent, userPrompt, res) {
             return res.status(400).json({ error: 'Could not extract text from the PDF.' });
         }
 
-        console.log(`Requesting task to LLM (${SELECTED_MODEL})...`)
-
         const defaultPrompt = `Please summarize the following text in a table format, including the problem, contribution, proposed method, experimental results, and conclusion. If any of these sections are not present, please indicate 'N/A'. Please use a concise, outline format for the sentences.:\n\n${text}`;
         const prompt = userPrompt ? `${userPrompt}:\n\n${text}` : defaultPrompt;
+
+        console.log(`Requesting task to LLM (${SELECTED_MODEL})...`)
+        console.log(`Length of request = ${prompt.length} characters.`)
 
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
         res.flushHeaders();
 
-        if (SELECTED_MODEL.toLowerCase() === 'openai') {
-            const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-            const OPENAI_URL = process.env.OPENAI_URL + "/v1/chat/completions";
+        let llm;
 
-            if (!OPENAI_API_KEY || !OPENAI_URL) {
-                throw new Error('OpenAI credentials (OPENAI_API_KEY, OPENAI_URL) are missing.');
-            }
-
-            const response = await fetch(OPENAI_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${OPENAI_API_KEY}`
-                },
-                body: JSON.stringify({
-                    model: "gpt-4o",
-                    messages: [
-                        { role: "system", content: "You are a helpful assistant." },
-                        { role: "user", content: prompt }
-                    ],
-                    stream: true
-                })
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
-            }
-
-            const decoder = new TextDecoder();
-            let buffer = '';
-
-            for await (const chunk of response.body) {
-                const chunkText = decoder.decode(chunk, { stream: true });
-                buffer += chunkText;
-                const lines = buffer.split('\n');
-                buffer = lines.pop();
-
-                for (const line of lines) {
-                    const trimmed = line.trim();
-                    if (trimmed.startsWith('data: ')) {
-                        const data = trimmed.slice(6);
-                        if (data === '[DONE]') continue;
-                        try {
-                            const json = JSON.parse(data);
-                            const content = json.choices[0]?.delta?.content;
-                            if (content && res.writable) {
-                                res.write(content);
-                            }
-                        } catch (e) {
-                            console.error('Error parsing OpenAI JSON:', e);
-                        }
-                    }
-                }
-            }
+        if (SELECTED_MODEL.toLowerCase() === 'ollama') {
+            llm = new OllamaLLM();
+        } else if (SELECTED_MODEL.toLowerCase() === 'openai') {
+            llm = new OpenAILLM();
         } else {
-            const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'No key available';
-            const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-            const llm = genAI.getGenerativeModel({ model: SELECTED_MODEL });
-
-            const result = await llm.generateContentStream(prompt);
-
-            for await (const chunk of result.stream) {
-                const chunkText = chunk.text?.();
-                if (res.writable && chunkText) {
-                    res.write(chunkText);
-                }
-            }
+            llm = new GeminiLLM();
         }
+
+        await llm.generateResponse(prompt, res);
 
         if (res.writable) {
             res.end();

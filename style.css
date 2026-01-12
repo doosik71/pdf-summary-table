@@ -171,14 +171,9 @@ h1 {
 .copy-buttons-container {
     display: flex;
     justify-content: flex-end;
-    /* Align buttons to the right */
     gap: 10px;
-    /* Space between buttons */
     margin-top: 15px;
-    /* Space above the buttons */
     margin-bottom: 10px;
-    /* Space below the buttons */
-    /* Initially hide the buttons until summary is available */
     visibility: hidden;
     opacity: 0;
     transition: visibility 0s, opacity 0.5s linear;
@@ -189,23 +184,23 @@ h1 {
     opacity: 1;
 }
 
+#copy-rich-text-btn,
 #copy-html-btn,
 #copy-markdown-btn {
-    background: #007bff;
-    /* A nice blue color */
+    background: #333;
     color: #fff;
     padding: 8px 15px;
-    border: none;
     border-radius: 5px;
+    border-width: 1px;
     cursor: pointer;
     font-size: 0.9em;
 }
 
+#copy-rich-text-btn:hover,
 #copy-html-btn:hover,
 #copy-markdown-btn:hover {
-    background: #0056b3;
+    background: #555;
 }
-
 
 #loading-animation {
     display: none;

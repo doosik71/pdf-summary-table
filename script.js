@@ -6,6 +6,7 @@ const summarizeBtn = document.getElementById('summarize-btn');
 const summaryOutput = document.getElementById('summary-output');
 const loadingAnimation = document.getElementById('loading-animation');
 const copyButtonsContainer = document.querySelector('.copy-buttons-container');
+const copyRichTextBtn = document.getElementById('copy-rich-text-btn');
 const copyHtmlBtn = document.getElementById('copy-html-btn');
 const copyMarkdownBtn = document.getElementById('copy-markdown-btn');
 
@@ -146,6 +147,24 @@ async function copyToClipboard(text) {
         alert('Failed to copy to clipboard.');
     }
 }
+
+copyRichTextBtn.addEventListener('click', async () => {
+    try {
+        const htmlContent = summaryOutput.innerHTML;
+        const textContent = summaryOutput.innerText;
+        const blobHtml = new Blob([htmlContent], { type: 'text/html' });
+        const blobText = new Blob([textContent], { type: 'text/plain' });
+        const data = [new ClipboardItem({
+            'text/html': blobHtml,
+            'text/plain': blobText
+        })];
+        await navigator.clipboard.write(data);
+        alert('Rich text copied to clipboard!');
+    } catch (err) {
+        console.error('Failed to copy rich text: ', err);
+        alert('Failed to copy rich text.');
+    }
+});
 
 copyHtmlBtn.addEventListener('click', () => {
     copyToClipboard(summaryOutput.innerHTML);

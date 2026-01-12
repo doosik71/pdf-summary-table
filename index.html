@@ -41,12 +41,13 @@
                 <p>The summary will appear here.</p>
             </div>
             <div class="copy-buttons-container">
+                <button id="copy-rich-text-btn">Copy Rich Text</button>
                 <button id="copy-html-btn">Copy HTML</button>
                 <button id="copy-markdown-btn">Copy Markdown</button>
             </div>
             <div id="loading-animation">
                 <div class="spinner"></div>
-                <p>Waiting for Gemini response...</p>
+                <p>Waiting for summary...</p>
             </div>
         </div>
     </div>
@@ -56,6 +57,7 @@
     <script>
         MathJax = {
             options: {
+                enableAssistiveMml: true,
                 menuOptions: {
                     settings: {
                         renderer: 'CHTML'
@@ -68,6 +70,70 @@
             },
             svg: {
                 fontCache: 'global'
+            },
+            startup: {
+                ready() {
+                    MathJax.startup.defaultReady();
+
+                    const addDataTex = () => {
+                        const mathItems = MathJax.startup.document.getMathItemsWithin(document.body);
+                        mathItems.forEach(item => {
+                            if (item.typesetRoot && !item.typesetRoot.hasAttribute('data-tex')) {
+                                item.typesetRoot.setAttribute('data-tex', item.math);
+                                item.typesetRoot.setAttribute('data-display', item.display);
+                            }
+                        });
+                    };
+
+                    MathJax.startup.promise.then(addDataTex);
+                    const originalTypesetPromise = MathJax.typesetPromise;
+                    MathJax.typesetPromise = function (nodes) {
+                        return originalTypesetPromise(nodes).then((result) => {
+                            addDataTex();
+                            return result;
+                        });
+                    };
+
+                    document.addEventListener('copy', (event) => {
+                        const selection = document.getSelection();
+                        if (selection.isCollapsed) return;
+
+                        const htmlContainer = document.createElement('div');
+                        const textContainer = document.createElement('div');
+
+                        for (let i = 0; i < selection.rangeCount; i++) {
+                            const range = selection.getRangeAt(i);
+                            htmlContainer.appendChild(range.cloneContents());
+                            textContainer.appendChild(range.cloneContents());
+                        }
+
+                        const mathNodes = htmlContainer.querySelectorAll('mjx-container');
+                        if (mathNodes.length > 0) {
+                            mathNodes.forEach(node => {
+                                const assistive = node.querySelector('mjx-assistive-mml');
+                                const mml = node.getAttribute('data-mathml') || (assistive && assistive.innerHTML);
+                                if (mml) {
+                                    node.outerHTML = mml;
+                                }
+                            });
+
+                            const textMathNodes = textContainer.querySelectorAll('mjx-container');
+                            textMathNodes.forEach(node => {
+                                const tex = node.getAttribute('data-tex');
+                                const isDisplay = node.getAttribute('data-display') === 'true';
+                                if (tex) {
+                                    node.outerHTML = isDisplay ? `$$${tex}$$` : `$${tex}$`;
+                                }
+                            });
+
+                            event.clipboardData.setData('text/html', htmlContainer.innerHTML);
+                            event.clipboardData.setData('text/plain', textContainer.innerText);
+                            event.preventDefault();
+
+                            console.log(htmlContainer.innerHTML);
+                        }
+                    });
+                }
             }
         };
     </script>
