@@ -111,6 +111,14 @@ h1 {
     /* Space below the button */
 }
 
+.page-range-section {
+    display: none;
+    margin-top: 10px;
+}
+
+.page-range-section label[for="end-page"] {
+    margin-left: 10px;
+}
 
 #summarize-btn {
     display: inline-block;

@@ -1,12 +1,12 @@
 # PDF Summary Web App
 
-This is a simple web application that allows you to upload a research paper in PDF format and get a summary of its content using Google's Gemini API.
+This is a simple web application that allows you to upload a research paper in PDF format and get a summary of its content using Large Language Models (Gemini, OpenAI, Ollama).
 
 ## Features
 
 - Upload a PDF file.
 - Extracts text from the PDF.
-- Generates a summary using the Gemini Pro API.
+- Generates a summary using Gemini, OpenAI, or Ollama.
 - Displays the summary on the web page.
 
 ## Prerequisites
@@ -25,15 +25,37 @@ This is a simple web application that allows you to upload a research paper in P
    npm install
    ```
 
-3. **Add your Gemini API Key:**
+3. **Configure Environment Variables:**
 
    - Create a new file named `.env` in the root of the project directory.
    - Copy the content from `.env.example` into `.env`.
-   - In the `.env` file, replace `"YOUR_API_KEY"` with your actual Gemini API key. You can obtain a key from [Google AI Studio](https://aistudio.google.com/).
+   - Configure the variables based on your preferred LLM provider.
 
-     ```batch
-     GEMINI_API_KEY="YOUR_API_KEY"
-     ```
+   **Gemini (Default)**
+
+   ```env
+   LLM_MODEL="gemini"
+   GEMINI_API_KEY="YOUR_API_KEY"
+   GEMINI_MODEL="gemini-2.5-flash"
+   ```
+
+   **OpenAI / LM Studio**
+
+   ```env
+   LLM_MODEL="openai"
+   OPENAI_API_KEY="YOUR_API_KEY" # or "lm-studio" for local
+   OPENAI_MODEL="gpt-4o"
+   OPENAI_URL="http://127.0.0.1:1234"
+   ```
+
+   **Ollama**
+
+   ```env
+   LLM_MODEL="ollama"
+   OLLAMA_MODEL="gpt-oss"
+   OLLAMA_URL="http://127.0.0.1:11434"
+   OLLAMA_CTX="32000"
+   ```
 
 ## Running the Application
 

@@ -9,8 +9,12 @@ const copyButtonsContainer = document.querySelector('.copy-buttons-container');
 const copyRichTextBtn = document.getElementById('copy-rich-text-btn');
 const copyHtmlBtn = document.getElementById('copy-html-btn');
 const copyMarkdownBtn = document.getElementById('copy-markdown-btn');
+const pageRangeSection = document.getElementById('page-range-section');
+const startPageSelect = document.getElementById('start-page');
+const endPageSelect = document.getElementById('end-page');
 
 let rawMarkdownOutput = ''; // To store the raw Markdown for copying
+let extractedPages = []; // Store extracted text per page
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Configure marked to treat underscores as literal text
@@ -94,13 +98,68 @@ promptSelect.addEventListener('change', () => {
     }
 });
 
+// Function to extract text from PDF
+async function extractPdfText(formData = null, jsonBody = null) {
+    loadingAnimation.style.display = 'flex';
+    loadingAnimation.querySelector('p').textContent = 'Extracting text...';
+    summaryOutput.innerHTML = '';
+    pageRangeSection.style.display = 'none';
+    extractedPages = [];
+
+    try {
+        const options = { method: 'POST' };
+        if (formData) {
+            options.body = formData;
+        } else if (jsonBody) {
+            options.body = JSON.stringify(jsonBody);
+            options.headers = { 'Content-Type': 'application/json' };
+        }
+
+        const response = await fetch('/extract-text', options);
+        if (!response.ok) throw new Error('Failed to extract text');
+
+        const data = await response.json();
+        extractedPages = data.pages;
+
+        // Populate page selects
+        startPageSelect.innerHTML = '';
+        endPageSelect.innerHTML = '';
+        extractedPages.forEach((_, index) => {
+            const pageNum = index + 1;
+            const optionStart = new Option(pageNum, index);
+            const optionEnd = new Option(pageNum, index);
+            startPageSelect.add(optionStart);
+            endPageSelect.add(optionEnd);
+        });
+
+        // Set defaults (Start: 1, End: Last)
+        if (extractedPages.length > 0) {
+            startPageSelect.value = 0;
+            endPageSelect.value = extractedPages.length - 1;
+            pageRangeSection.style.display = 'block';
+        }
+
+    } catch (error) {
+        console.error('Extraction error:', error);
+        summaryOutput.innerHTML = `<p style="color: red;">Error extracting PDF text: ${error.message}</p>`;
+    } finally {
+        loadingAnimation.style.display = 'none';
+        loadingAnimation.querySelector('p').textContent = 'Waiting for summary...';
+    }
+}
+
 // Input clear/disable logic
 fileInput.addEventListener('change', () => {
     if (fileInput.files.length > 0) {
         pdfUrlInput.value = ''; // Clear URL input
         pdfUrlInput.disabled = true; // Disable URL input
+
+        const formData = new FormData();
+        formData.append('pdfFile', fileInput.files[0]);
+        extractPdfText(formData, null);
     } else {
         pdfUrlInput.disabled = false; // Enable URL input
+        pageRangeSection.style.display = 'none';
     }
 });
 
@@ -128,12 +187,15 @@ fileInput.addEventListener('drop', (e) => {
 });
 
 
-pdfUrlInput.addEventListener('input', () => {
+pdfUrlInput.addEventListener('change', () => {
     if (pdfUrlInput.value.trim() !== '') {
         fileInput.value = ''; // Clear file input
         fileInput.disabled = true; // Disable file input
+
+        extractPdfText(null, { pdfUrl: pdfUrlInput.value.trim() });
     } else {
         fileInput.disabled = false; // Enable file input
+        pageRangeSection.style.display = 'none';
     }
 });
 
@@ -186,35 +248,29 @@ summarizeBtn.addEventListener('click', async () => {
         selectedPrompt = customPrompt.value;
     }
 
-    let requestBody;
-    let headers = {};
-    let fetchUrl;
-
-    if (fileInput.files.length > 0) {
-        // File upload
-        const file = fileInput.files[0];
-        const formData = new FormData();
-        formData.append('pdfFile', file);
-        formData.append('prompt', selectedPrompt);
-        requestBody = formData;
-        fetchUrl = '/summarize-file'; // New endpoint for file uploads
-    } else if (pdfUrlInput.value.trim() !== '') {
-        // URL submission
-        const pdfUrl = pdfUrlInput.value.trim();
-        requestBody = JSON.stringify({ pdfUrl: pdfUrl, prompt: selectedPrompt });
-        headers['Content-Type'] = 'application/json';
-        fetchUrl = '/summarize-url'; // New endpoint for URL submissions
-    } else {
-        summaryOutput.innerHTML = '<p style="color: red;">Please select a PDF file or enter a PDF URL.</p>';
+    if (extractedPages.length === 0) {
+        summaryOutput.innerHTML = '<p style="color: red;">Please upload a PDF first.</p>';
         loadingAnimation.style.display = 'none';
         return;
     }
 
+    // Get selected page range
+    const startIndex = parseInt(startPageSelect.value);
+    const endIndex = parseInt(endPageSelect.value);
+
+    if (startIndex > endIndex) {
+        summaryOutput.innerHTML = '<p style="color: red;">Start page cannot be greater than end page.</p>';
+        loadingAnimation.style.display = 'none';
+        return;
+    }
+
+    const selectedText = extractedPages.slice(startIndex, endIndex + 1).join('\n');
+
     try {
-        const response = await fetch(fetchUrl, { // Use the determined fetchUrl
+        const response = await fetch('/summarize', {
             method: 'POST',
-            body: requestBody,
-            headers: headers,
+            body: JSON.stringify({ text: selectedText, prompt: selectedPrompt }),
+            headers: { 'Content-Type': 'application/json' },
         });
 
         if (!response.ok) {

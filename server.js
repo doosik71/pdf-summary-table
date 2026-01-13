@@ -165,7 +165,7 @@ class GeminiLLM {
 }
 
 // --- Summarization Helper Function ---
-async function performSummarization(pdfContent, userPrompt, res) {
+async function generateSummary(text, userPrompt, res) {
     // Add error listener to prevent crash on response stream error
     res.on('error', (err) => {
         console.error('Response stream error:', err);
@@ -174,16 +174,7 @@ async function performSummarization(pdfContent, userPrompt, res) {
     const SELECTED_MODEL = process.env.LLM_MODEL || 'gemini';
 
     try {
-        console.log("Extracting text from PDF document...")
-
-        const pdfDocument = new PDFParse(pdfContent);
-        const pdfData = await pdfDocument.getText();
-        const text = pdfData.pages.map(p => p.text).join('\n');
-
-        if (!text.trim()) {
-            return res.status(400).json({ error: 'Could not extract text from the PDF.' });
-        }
-
+        // Text is provided directly
         const defaultPrompt = `Please summarize the following text in a table format, including the problem, contribution, proposed method, experimental results, and conclusion. If any of these sections are not present, please indicate 'N/A'. Please use a concise, outline format for the sentences.:\n\n${text}`;
         const prompt = userPrompt ? `${userPrompt}:\n\n${text}` : defaultPrompt;
 
@@ -229,25 +220,39 @@ app.get('/prompts', (req, res) => {
     res.json(predefinedPrompts);
 });
 
-// Route for file uploads
-app.post('/summarize-file', upload.single('pdfFile'), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ error: 'No PDF file provided.' });
+// Route for extracting text from PDF (File or URL)
+app.post('/extract-text', upload.single('pdfFile'), async (req, res) => {
+    try {
+        let pdfContent;
+        if (req.file) {
+            pdfContent = { data: req.file.buffer };
+        } else if (req.body.pdfUrl) {
+            pdfContent = { url: req.body.pdfUrl };
+        } else {
+            return res.status(400).json({ error: 'No PDF provided.' });
+        }
+
+        console.log("Extracting text from PDF document...");
+        const pdfDocument = new PDFParse(pdfContent);
+        const pdfData = await pdfDocument.getText();
+
+        // Return pages as an array of strings
+        const pages = pdfData.pages.map(p => p.text);
+        res.json({ pages: pages });
+
+    } catch (error) {
+        console.error('Extraction Error:', error);
+        res.status(500).json({ error: 'Failed to extract text from PDF.' });
     }
-    const pdfContent = { data: req.file.buffer };
-    const userPrompt = req.body.prompt;
-    await performSummarization(pdfContent, userPrompt, res);
 });
 
-// Route for URL submissions
-app.post('/summarize-url', async (req, res) => {
-    const pdfUrl = req.body.pdfUrl;
-    if (!pdfUrl) {
-        return res.status(400).json({ error: 'No PDF URL provided.' });
+// Route for summarization (accepts text directly)
+app.post('/summarize', async (req, res) => {
+    const { text, prompt } = req.body;
+    if (!text) {
+        return res.status(400).json({ error: 'No text provided for summarization.' });
     }
-    const pdfContent = { url: pdfUrl };
-    const userPrompt = req.body.prompt;
-    await performSummarization(pdfContent, userPrompt, res);
+    await generateSummary(text, prompt, res);
 });
 
 
