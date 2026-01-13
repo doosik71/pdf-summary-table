@@ -310,24 +310,31 @@ async function startApp() {
         // Optionally, handle error more gracefully, e.g., by using default prompts
     }
 
-    const server = app.listen(targetPort, () => {
-        console.log(`Server listening at http://localhost:${targetPort}`);
-    });
+    return new Promise((resolve, reject) => {
+        const server = app.listen(targetPort, () => {
+            console.log(`Server listening at http://localhost:${targetPort}`);
+            resolve(targetPort);
+        });
 
-    server.on('error', (err) => {
-        if (err.code === 'EADDRINUSE') {
-            console.error(`Error: Port ${targetPort} is already in use.`);
-            if (specifiedPortArg) {
-                console.error('Please choose a different port or omit the port argument to let the server find one.');
+        server.on('error', (err) => {
+            if (err.code === 'EADDRINUSE') {
+                console.error(`Error: Port ${targetPort} is already in use.`);
+                if (specifiedPortArg) {
+                    console.error('Please choose a different port or omit the port argument to let the server find one.');
+                } else {
+                    console.error('The default port finding mechanism failed to find a free port. This is unexpected.');
+                }
+                process.exit(1);
             } else {
-                console.error('The default port finding mechanism failed to find a free port. This is unexpected.');
+                console.error('Server error:', err);
+                process.exit(1);
             }
-            process.exit(1);
-        } else {
-            console.error('Server error:', err);
-            process.exit(1);
-        }
+        });
     });
 }
 
-startApp();
+if (require.main === module) {
+    startApp();
+}
+
+module.exports = { startApp };

@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         prompts.forEach(prompt => {
             const option = document.createElement('option');
+            option.title = prompt.value;
             option.value = prompt.value;
             option.textContent = prompt.label;
             // Insert before the custom option

@@ -1,10 +1,12 @@
 {
   "name": "pdf-summary-table",
   "version": "1.0.0",
-  "description": "PDF 문서의 요약표를 작성한다. 내용 요약은 Gemini를 사용한다.",
-  "main": "script.js",
+  "description": "PDF 문서의 요약표를 작성한다. 내용 요약은 Gemini/Ollama/OpenAI를 사용한다.",
+  "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "electron .",
+    "server": "node server.js",
+    "dist": "electron-builder"
   },
   "keywords": [],
   "author": "",
@@ -15,5 +17,16 @@
     "express": "^5.2.1",
     "multer": "^2.0.2",
     "pdf-parse": "^2.4.5"
+  },
+  "devDependencies": {
+    "electron": "^39.2.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.pdfsummary.app",
+    "productName": "PDF Summary",
+    "win": {
+      "target": "nsis"
+    }
   }
 }
