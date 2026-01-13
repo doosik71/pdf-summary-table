@@ -12,4 +12,3 @@ if %errorlevel% neq 0 (
 )
 
 echo Build successful! The executable is located in the 'dist' folder.
-pause

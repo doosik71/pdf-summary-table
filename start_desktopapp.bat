@@ -1,2 +1,3 @@
 @echo off
-"dist\win-unpacked\PDF Summary.exe"
+
+start "PDF Summary" "%~dp0dist\win-unpacked\PDF Summary.exe"

@@ -1,5 +1,6 @@
 const { app, BrowserWindow } = require('electron');
 const { startApp } = require('./server');
+const path = require('path');
 
 let mainWindow;
 
@@ -11,6 +12,7 @@ async function createWindow() {
     width: 1280,
     height: 900,
     title: "PDF Summary",
+    icon: path.join(__dirname, 'favicon.ico'),
     webPreferences: {
       nodeIntegration: false, // Security: Keep false for loading remote/local content
       contextIsolation: true

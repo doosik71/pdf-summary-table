@@ -26,7 +26,8 @@
     "appId": "com.pdfsummary.app",
     "productName": "PDF Summary",
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "favicon.ico"
     }
   }
 }
