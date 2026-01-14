@@ -14,7 +14,8 @@ const app = express();
 let predefinedPrompts = []; // Array to store prompts from prompt.json
 
 app.use(express.static(__dirname)); // Serve static files from the current directory
-app.use(express.json()); // Middleware to parse JSON bodies
+app.use(express.json({ limit: '50mb' })); // Middleware to parse JSON bodies
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 
 // --- LLM Classes ---
