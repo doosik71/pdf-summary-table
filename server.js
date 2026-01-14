@@ -148,7 +148,11 @@ class OllamaLLM {
 class GeminiLLM {
     constructor() {
         this.model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-        this.apiKey = process.env.GEMINI_API_KEY || 'No key!';
+        this.apiKey = process.env.GEMINI_API_KEY;
+
+        if (this.apiKey === undefined) {
+            throw new Error('No Gemini API key provided.');
+        }
     }
 
     async generateResponse(prompt, res) {
@@ -212,6 +216,7 @@ async function generateSummary(text, userPrompt, res) {
     }
 }
 
+// --- Express Routes ---
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -255,7 +260,6 @@ app.post('/summarize', async (req, res) => {
     }
     await generateSummary(text, prompt, res);
 });
-
 
 // Function to check if a port is in use (exclusive check)
 function checkPort(port) {
